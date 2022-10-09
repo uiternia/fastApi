@@ -1,6 +1,5 @@
-from http import client
-from fastapi import HTTPException
 from decouple import config
+from fastapi import HTTPException
 from typing import Union
 import motor.motor_asyncio
 from bson import ObjectId
@@ -25,7 +24,7 @@ def todo_serializer(todo) -> dict:
     }
 
 
-def user_selializer(user) -> dict:
+def user_serializer(user) -> dict:
     return {
         "id": str(user["_id"]),
         "email": user["email"],
@@ -57,10 +56,10 @@ async def db_get_single_todo(id: str) -> Union[dict, bool]:
 async def db_update_todo(id: str, data: dict) -> Union[dict, bool]:
     todo = await collection_todo.find_one({"_id": ObjectId(id)})
     if todo:
-        update_todo = await collection_todo.update_one(
+        updated_todo = await collection_todo.update_one(
             {"_id": ObjectId(id)}, {"$set": data}
         )
-        if (update_todo.modified_count > 0):
+        if (updated_todo.modified_count > 0):
             new_todo = await collection_todo.find_one({"_id": ObjectId(id)})
             return todo_serializer(new_todo)
     return False
@@ -72,7 +71,7 @@ async def db_delete_todo(id: str) -> bool:
         deleted_todo = await collection_todo.delete_one({"_id": ObjectId(id)})
         if (deleted_todo.deleted_count > 0):
             return True
-        return False
+    return False
 
 
 async def db_signup(data: dict) -> dict:
@@ -82,10 +81,10 @@ async def db_signup(data: dict) -> dict:
     if overlap_user:
         raise HTTPException(status_code=400, detail='Email is already taken')
     if not password or len(password) < 6:
-        raise HTTPException(status_code=400, detail='password too short')
-    user = await collection_user.insert_one({"email": email, "password": auth.generate_hash_pw(password)})
+        raise HTTPException(status_code=400, detail='Password too short')
+    user = await collection_user.insert_one({"email": email, "password": auth.generate_hashed_pw(password)})
     new_user = await collection_user.find_one({"_id": user.inserted_id})
-    return user_selializer(new_user)
+    return user_serializer(new_user)
 
 
 async def db_login(data: dict) -> str:
@@ -94,7 +93,6 @@ async def db_login(data: dict) -> str:
     user = await collection_user.find_one({"email": email})
     if not user or not auth.verify_pw(password, user["password"]):
         raise HTTPException(
-            status_code=401, detail='Invalid email or password'
-        )
+            status_code=401, detail='Invalid email or password')
     token = auth.encode_jwt(user['email'])
     return token
