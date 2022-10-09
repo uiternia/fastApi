@@ -30,14 +30,13 @@ async def signup(request: Request, user: UserBody, csrf_protect: CsrfProtect = D
 
 
 @router.post("/api/login", response_model=SuccessMsg)
-async def login(response: Response, request: Request, user: UserBody, csrf_protect: CsrfProtect = Depends()):
+async def login(request: Request, response: Response, user: UserBody, csrf_protect: CsrfProtect = Depends()):
     csrf_token = csrf_protect.get_csrf_from_headers(request.headers)
     csrf_protect.validate_csrf(csrf_token)
     user = jsonable_encoder(user)
     token = await db_login(user)
     response.set_cookie(
-        key="access_token", value=f"Bearer {token}", httponly=True, samesite="none", secure=True
-    )
+        key="access_token", value=f"Bearer {token}", httponly=True, samesite="none", secure=True)
     return {"message": "Successfully logged-in"}
 
 
@@ -45,15 +44,14 @@ async def login(response: Response, request: Request, user: UserBody, csrf_prote
 def logout(request: Request, response: Response, csrf_protect: CsrfProtect = Depends()):
     csrf_token = csrf_protect.get_csrf_from_headers(request.headers)
     csrf_protect.validate_csrf(csrf_token)
-    response.set_cookie(
-        key="access_token", value="", httponly=True, samesite="none", secure=True
-    )
+    response.set_cookie(key="access_token", value="",
+                        httponly=True, samesite="none", secure=True)
+    return {'message': 'Successfully logged-out'}
 
 
 @router.get('/api/user', response_model=UserInfo)
 def get_user_refresh_jwt(request: Request, response: Response):
-    new_token, subject = auth.verify_csrf_update_jwt(request)
+    new_token, subject = auth.verify_update_jwt(request)
     response.set_cookie(
-        key="access_token", value=f"Bearer {new_token}", httponly=True, samesite="none", secure=True
-    )
+        key="access_token", value=f"Bearer {new_token}", httponly=True, samesite="none", secure=True)
     return {'email': subject}
